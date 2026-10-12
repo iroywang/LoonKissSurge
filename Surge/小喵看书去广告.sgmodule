@@ -5,12 +5,12 @@
 #!category=iKeLee
 #!openUrl=https://apps.apple.com/app/id6445987673
 #!tag=去广告
-#!loon_version=3.2.4(787)
+#!loon_version=3.5.1(998)
 #!homepage=https://hub.kelee.one
-#!date=2025-05-13 15:17:08
+#!date=2026-10-02 13:57:49
 
-[URL Rewrite]
-^https:\/\/api\.miaomiaoyd\.com\/book\/config\/getAdsSettings$ - reject
+[Map Local]
+(?i)^https:\/\/api\.miaomiaoyd\.com\/book\/config\/getAdsSettings$ data-type=text data="" status-code=404
 
 [MITM]
 hostname = %APPEND% api.miaomiaoyd.com

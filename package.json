@@ -5,6 +5,7 @@
 	"main": "build.js",
 	"type": "module",
 	"scripts": {
+		"update": "node update.mjs",
 		"build": "node build.ts",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},

@@ -5,12 +5,12 @@
 #!category=BetaModule
 #!openUrl=https://apps.apple.com/app/id399423833
 #!tag=去广告
-#!loon_version=3.2.4(787)
+#!loon_version=3.5.1(998)
 #!homepage=https://hub.kelee.one
-#!date=2025-05-13 15:17:08
+#!date=2026-10-02 13:57:49
 
 [Body Rewrite]
-http-response-jq ^https:\/\/newapi\.meishi\.cc\/indexnew\/home_feeds 'if .data.items then .data.items |= map(select(.type | . != "101" and . != "12")) else . end'
+http-response-jq (?i)^https:\/\/newapi\.meishi\.cc\/indexnew\/home_feeds 'if .data.items then .data.items |= map(select(.type | . != "101" and . != "12")) else . end'
 
 [MITM]
 hostname = %APPEND% newapi.meishi.cc

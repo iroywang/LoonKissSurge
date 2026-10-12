@@ -5,18 +5,18 @@
 #!category=iKeLee
 #!openUrl=https://apps.apple.com/app/id1659339393
 #!tag=去广告
-#!loon_version=3.2.4(787)
+#!loon_version=3.5.1(998)
 #!homepage=https://hub.kelee.one
-#!date=2025-11-23 18:56:41
+#!date=2026-10-02 13:57:49
 
 [Map Local]
-^https:\/\/api\.kurobbs\.com\/config\/getOpenScreen$ data-type=text data="{}" status-code=200 header="Content-Type:application/json"
+(?i)^https:\/\/api\.kurobbs\.com\/config\/getOpenScreen$ data-type=text data="{}" status-code=200 header="Content-Type:application/json"
 
-^https:\/\/api\.kurobbs\.com\/config\/index\/windows$ data-type=text data="{}" status-code=200 header="Content-Type:application/json"
+(?i)^https:\/\/api\.kurobbs\.com\/config\/index\/windows$ data-type=text data="{}" status-code=200 header="Content-Type:application/json"
 
-^https:\/\/api\.kurobbs\.com\/config\/search\/getSearchConfig\? data-type=text data="{}" status-code=200 header="Content-Type:application/json"
+(?i)^https:\/\/api\.kurobbs\.com\/config\/search\/getSearchConfig\? data-type=text data="{}" status-code=200 header="Content-Type:application/json"
 
-^https:\/\/api\.kurobbs\.com\/forum\/app\/topic\/hotlist\? data-type=text data="{}" status-code=200 header="Content-Type:application/json"
+(?i)^https:\/\/api\.kurobbs\.com\/forum\/app\/topic\/hotlist\? data-type=text data="{}" status-code=200 header="Content-Type:application/json"
 
 [MITM]
 hostname = %APPEND% api.kurobbs.com

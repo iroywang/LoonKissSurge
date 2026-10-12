@@ -3,8 +3,35 @@
 import path from "node:path";
 import { promises as fs, Dirent } from "node:fs"; // 使用 fs.promises 和 Dirent
 
-const REPO_URL =
-    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/refs/heads/main/";
+import { execSync } from "node:child_process";
+
+function resolveRepoUrl(): string {
+    if (process.env.REPO_URL) {
+        return process.env.REPO_URL.endsWith("/")
+            ? process.env.REPO_URL
+            : `${process.env.REPO_URL}/`;
+    }
+    if (process.env.GITHUB_REPOSITORY) {
+        return `https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/refs/heads/main/`;
+    }
+    try {
+        const remoteUrl = execSync("git remote get-url origin", {
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "ignore"],
+        }).trim();
+        const match = remoteUrl.match(
+            /github\.com[:/]([^/]+\/[^/.]+?)(?:\.git)?$/i
+        );
+        if (match?.[1]) {
+            return `https://raw.githubusercontent.com/${match[1]}/refs/heads/main/`;
+        }
+    } catch {
+        // fallback to default
+    }
+    return "https://raw.githubusercontent.com/QingRex/LoonKissSurge/refs/heads/main/";
+}
+
+const REPO_URL = resolveRepoUrl();
 const ROOT_DIR = process.cwd(); // 根目录
 const OUTPUT_DIR = path.join(ROOT_DIR, "public");
 
@@ -170,11 +197,11 @@ function generateHtml(tree: string) {
                 <p><strong>提示：</strong>请先安装以下两个基础插件，并在插件列表中保持它们优先生效（位于最下方）。</p>
                 <ul>
                     <li>
-                        <a href="https://raw.githubusercontent.com/QingRex/LoonKissSurge/refs/heads/main/Surge/Beta/%E5%B9%BF%E5%91%8A%E5%B9%B3%E5%8F%B0%E6%8B%A6%E6%88%AA%E5%99%A8.beta.sgmodule" target="_blank">广告平台拦截器.beta.sgmodule
+                        <a href="${REPO_URL}Surge/Beta/%E5%B9%BF%E5%91%8A%E5%B9%B3%E5%8F%B0%E6%8B%A6%E6%88%AA%E5%99%A8.beta.sgmodule" target="_blank">广告平台拦截器.beta.sgmodule
                             <a
                                 style="border-bottom: none"
                                 href="surge:///install-module?url=${encodeURIComponent(
-                                    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/refs/heads/main/Surge/Beta/%E5%B9%BF%E5%91%8A%E5%B9%B3%E5%8F%B0%E6%8B%A6%E6%88%AA%E5%99%A8.beta.sgmodule"
+                                    `${REPO_URL}Surge/Beta/%E5%B9%BF%E5%91%8A%E5%B9%B3%E5%8F%B0%E6%8B%A6%E6%88%AA%E5%99%A8.beta.sgmodule`
                                 )}"
                                 target="_blank"
                             >
@@ -188,7 +215,7 @@ function generateHtml(tree: string) {
                             <a
                                 style="border-bottom: none"
                                 href="scriptable:///run/SurgeModuleTool?url=${encodeURIComponent(
-                                    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/refs/heads/main/Surge/Beta/%E5%B9%BF%E5%91%8A%E5%B9%B3%E5%8F%B0%E6%8B%A6%E6%88%AA%E5%99%A8.beta.sgmodule"
+                                    `${REPO_URL}Surge/Beta/%E5%B9%BF%E5%91%8A%E5%B9%B3%E5%8F%B0%E6%8B%A6%E6%88%AA%E5%99%A8.beta.sgmodule`
                                 )}"
                                 target="_blank"
                             >
@@ -202,11 +229,11 @@ function generateHtml(tree: string) {
                         </a>
                     </li>
                     <li>
-                        <a href="https://raw.githubusercontent.com/QingRex/LoonKissSurge/refs/heads/main/Surge/Beta/HTTPDNS%E6%8B%A6%E6%88%AA%E5%99%A8.beta.sgmodule" target="_blank">HTTPDNS拦截器.beta.sgmodule
+                        <a href="${REPO_URL}Surge/Beta/HTTPDNS%E6%8B%A6%E6%88%AA%E5%99%A8.beta.sgmodule" target="_blank">HTTPDNS拦截器.beta.sgmodule
                             <a
                                 style="border-bottom: none"
                                 href="surge:///install-module?url=${encodeURIComponent(
-                                    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/refs/heads/main/Surge/Beta/HTTPDNS%E6%8B%A6%E6%88%AA%E5%99%A8.beta.sgmodule"
+                                    `${REPO_URL}Surge/Beta/HTTPDNS%E6%8B%A6%E6%88%AA%E5%99%A8.beta.sgmodule`
                                 )}"
                                 target="_blank"
                             >
@@ -220,7 +247,7 @@ function generateHtml(tree: string) {
                             <a
                                 style="border-bottom: none"
                                 href="scriptable:///run/SurgeModuleTool?url=${encodeURIComponent(
-                                    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/refs/heads/main/Surge/Beta/HTTPDNS%E6%8B%A6%E6%88%AA%E5%99%A8.beta.sgmodule"
+                                    `${REPO_URL}Surge/Beta/HTTPDNS%E6%8B%A6%E6%88%AA%E5%99%A8.beta.sgmodule`
                                 )}"
                                 target="_blank"
                             >
