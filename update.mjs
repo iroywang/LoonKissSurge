@@ -165,14 +165,52 @@ const OFFICIAL_MODULES = {
 
 import { execFileSync } from "node:child_process";
 
+function curlFetch(url, userAgent) {
+    const args = ["-sSL", "--max-time", "20", "-A", userAgent];
+    if (process.env.WARP_PROXY) {
+        args.push("-x", process.env.WARP_PROXY);
+    }
+    args.push(url);
+    const curlOut = execFileSync("curl", args, {
+        encoding: "utf8",
+        maxBuffer: 20 * 1024 * 1024,
+    });
+    if (
+        curlOut &&
+        !curlOut.includes("<title>Just a moment...</title>") &&
+        !curlOut.includes("403 Forbidden") &&
+        !curlOut.includes("error code:")
+    ) {
+        return {
+            ok: true,
+            status: 200,
+            headers: new Map([["content-type", "text/plain"]]),
+            text: async () => curlOut,
+            json: async () => JSON.parse(curlOut),
+        };
+    }
+    return null;
+}
+
 async function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const headers = {
         "User-Agent": LOON_UA,
         Accept: "*/*",
         ...(options.headers || {}),
     };
+
+    // 如果配置了 WARP_PROXY 且请求的是 kelee.one，优先走 WARP 代理绕过机房 IP 403
+    if (process.env.WARP_PROXY && url.includes("kelee.one")) {
+        try {
+            const proxied = curlFetch(url, headers["User-Agent"]);
+            if (proxied) return proxied;
+        } catch {
+            // fallback to normal fetch
+        }
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
         const res = await fetch(url, {
             ...options,
@@ -181,27 +219,8 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
         });
         if (res.status === 403) {
             try {
-                const curlOut = execFileSync(
-                    "curl",
-                    [
-                        "-sSL",
-                        "--max-time",
-                        "20",
-                        "-A",
-                        headers["User-Agent"],
-                        url,
-                    ],
-                    { encoding: "utf8", maxBuffer: 20 * 1024 * 1024 }
-                );
-                if (curlOut && !curlOut.includes("<title>Just a moment...</title>") && !curlOut.includes("403 Forbidden")) {
-                    return {
-                        ok: true,
-                        status: 200,
-                        headers: new Map([["content-type", "text/plain"]]),
-                        text: async () => curlOut,
-                        json: async () => JSON.parse(curlOut),
-                    };
-                }
+                const fallback = curlFetch(url, headers["User-Agent"]);
+                if (fallback) return fallback;
             } catch {
                 // ignore curl fallback error and return original response
             }
