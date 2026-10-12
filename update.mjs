@@ -163,11 +163,50 @@ const OFFICIAL_MODULES = {
         "https://raw.githubusercontent.com/Maasea/sgmodule/master/AliDNS.sgmodule",
 };
 
+import { execFileSync } from "node:child_process";
+
 async function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const headers = {
+        "User-Agent": LOON_UA,
+        Accept: "*/*",
+        ...(options.headers || {}),
+    };
     try {
-        return await fetch(url, { ...options, signal: controller.signal });
+        const res = await fetch(url, {
+            ...options,
+            headers,
+            signal: controller.signal,
+        });
+        if (res.status === 403) {
+            try {
+                const curlOut = execFileSync(
+                    "curl",
+                    [
+                        "-sSL",
+                        "--max-time",
+                        "20",
+                        "-A",
+                        headers["User-Agent"],
+                        url,
+                    ],
+                    { encoding: "utf8", maxBuffer: 20 * 1024 * 1024 }
+                );
+                if (curlOut && !curlOut.includes("<title>Just a moment...</title>") && !curlOut.includes("403 Forbidden")) {
+                    return {
+                        ok: true,
+                        status: 200,
+                        headers: new Map([["content-type", "text/plain"]]),
+                        text: async () => curlOut,
+                        json: async () => JSON.parse(curlOut),
+                    };
+                }
+            } catch {
+                // ignore curl fallback error and return original response
+            }
+        }
+        return res;
     } finally {
         clearTimeout(timer);
     }
