@@ -316,6 +316,16 @@ async function updateKeleePlugins(parserCode, forceAll = false) {
     const plugins = listData.lists || [];
     console.log(`📋 共发现 ${plugins.length} 个上游 Loon 插件`);
 
+    const mapFilePath = path.join(SURGE_DIR, "pluginhub_map.yaml");
+    const existingMap = {};
+    if (fs.existsSync(mapFilePath)) {
+        const rawYaml = fs.readFileSync(mapFilePath, "utf8");
+        for (const line of rawYaml.split(/\r?\n/)) {
+            const m = line.match(/^"(.+?)":\s*"(.+?)"$/);
+            if (m) existingMap[m[1]] = m[2];
+        }
+    }
+
     let updatedCount = 0;
     let skippedUpToDate = 0;
     let skippedExcluded = 0;
@@ -334,12 +344,11 @@ async function updateKeleePlugins(parserCode, forceAll = false) {
 
         const surgeFilePath = path.join(SURGE_DIR, `${name}.sgmodule`);
         const betaFilePath = path.join(BETA_DIR, `${name}.beta.sgmodule`);
+        const listDate = (item.date || "").trim();
 
         if (!forceAll && fs.existsSync(surgeFilePath) && fs.existsSync(betaFilePath)) {
-            const existing = fs.readFileSync(surgeFilePath, "utf8");
-            const dateMatch = existing.match(/^#!date=(.+)$/m);
-            if (dateMatch && dateMatch[1].trim() === (item.date || "").trim()) {
-                pluginDateMap[name] = item.date;
+            if (existingMap[name] && existingMap[name] === listDate) {
+                pluginDateMap[name] = listDate;
                 skippedUpToDate++;
                 return;
             }
@@ -391,9 +400,7 @@ async function updateKeleePlugins(parserCode, forceAll = false) {
                 );
             }
 
-            const actualDate =
-                surgeBody.match(/^#!date=(.+)$/m)?.[1]?.trim() || item.date || "";
-            pluginDateMap[name] = actualDate;
+            pluginDateMap[name] = listDate || surgeBody.match(/^#!date=(.+)$/m)?.[1]?.trim() || "";
             updatedCount++;
             process.stdout.write(`\r✅ 已转换更新: ${updatedCount} 个 (当前: ${name})          `);
         } catch (err) {
@@ -410,7 +417,7 @@ async function updateKeleePlugins(parserCode, forceAll = false) {
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([k, v]) => `"${k}": "${v}"`);
     fs.writeFileSync(
-        path.join(SURGE_DIR, "pluginhub_map.yaml"),
+        mapFilePath,
         yamlLines.length > 0 ? yamlLines.join("\n") + "\n" : "{}\n",
         "utf8"
     );

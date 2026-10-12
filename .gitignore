@@ -1,5 +1,4 @@
 *.py
-*.yml
 node_modules
 public
 dist
