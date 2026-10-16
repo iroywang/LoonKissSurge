@@ -509,6 +509,124 @@ async function updateOfficialModules() {
     console.log(`🎉 Official 模块更新完成: 成功同步 ${updated} 个, 保留本地 ${failed} 个`);
 }
 
+const COMBINED_MODULE_SOURCES = [
+    { name: "广告平台拦截器", file: path.join(SURGE_DIR, "广告平台拦截器.sgmodule"), betaFile: path.join(BETA_DIR, "广告平台拦截器.beta.sgmodule") },
+    { name: "可莉广告过滤器", file: path.join(SURGE_DIR, "可莉广告过滤器.sgmodule"), betaFile: path.join(BETA_DIR, "可莉广告过滤器.beta.sgmodule") },
+    { name: "HTTPDNS拦截器", file: path.join(SURGE_DIR, "HTTPDNS拦截器.sgmodule"), betaFile: path.join(BETA_DIR, "HTTPDNS拦截器.beta.sgmodule") },
+    { name: "DREAME去广告", file: path.join(SURGE_DIR, "DREAME去广告.sgmodule"), betaFile: path.join(BETA_DIR, "DREAME去广告.beta.sgmodule") },
+    { name: "京东去广告", file: path.join(SURGE_DIR, "京东去广告.sgmodule"), betaFile: path.join(BETA_DIR, "京东去广告.beta.sgmodule") },
+    { name: "什么值得买去广告", file: path.join(SURGE_DIR, "什么值得买去广告.sgmodule"), betaFile: path.join(BETA_DIR, "什么值得买去广告.beta.sgmodule") },
+    { name: "喜马拉雅去广告", file: path.join(SURGE_DIR, "喜马拉雅去广告.sgmodule"), betaFile: path.join(BETA_DIR, "喜马拉雅去广告.beta.sgmodule") },
+    { name: "斗鱼去广告", file: path.join(SURGE_DIR, "斗鱼去广告.sgmodule"), betaFile: path.join(BETA_DIR, "斗鱼去广告.beta.sgmodule") },
+    { name: "淘宝去广告", file: path.join(SURGE_DIR, "淘宝去广告.sgmodule"), betaFile: path.join(BETA_DIR, "淘宝去广告.beta.sgmodule") },
+    { name: "百度网盘去广告", file: path.join(SURGE_DIR, "百度网盘去广告.sgmodule"), betaFile: path.join(BETA_DIR, "百度网盘去广告.beta.sgmodule") },
+    { name: "百度贴吧去广告", file: path.join(SURGE_DIR, "百度贴吧去广告.sgmodule"), betaFile: path.join(BETA_DIR, "百度贴吧去广告.beta.sgmodule") },
+    { name: "高德地图去广告", file: path.join(SURGE_DIR, "高德地图去广告.sgmodule"), betaFile: path.join(BETA_DIR, "高德地图去广告.beta.sgmodule") },
+    { name: "Youtube (Music) Enhance", file: path.join(OFFICIAL_DIR, "Youtube (Music) Enhance.official.sgmodule"), betaFile: path.join(OFFICIAL_DIR, "Youtube (Music) Enhance.official.sgmodule") }
+];
+
+async function generateCombinedAdBlockModule() {
+    console.log("📦 正在自动合并生成「去广告全家桶」模块...");
+
+    function buildModuleContent(isBeta) {
+        const sections = {
+            "[Rule]": [],
+            "[URL Rewrite]": [],
+            "[Body Rewrite]": [],
+            "[Map Local]": [],
+            "[Script]": []
+        };
+        const hostnames = new Set();
+
+        for (const item of COMBINED_MODULE_SOURCES) {
+            const filePath = isBeta ? item.betaFile : item.file;
+            if (!fs.existsSync(filePath)) {
+                console.warn(`⚠️ 合并模块时未找到文件: ${filePath}`);
+                continue;
+            }
+            const content = fs.readFileSync(filePath, "utf8");
+            const lines = content.split(/\r?\n/);
+            let curSec = null;
+            const secLines = {};
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                    curSec = trimmed;
+                    secLines[curSec] = [];
+                    continue;
+                }
+                if (curSec && trimmed && !trimmed.startsWith("#!")) {
+                    secLines[curSec].push(trimmed);
+                }
+            }
+
+            for (const sec of Object.keys(sections)) {
+                if (secLines[sec] && secLines[sec].length > 0) {
+                    sections[sec].push(`# > ${item.name}`);
+                    sections[sec].push(...secLines[sec]);
+                    sections[sec].push("");
+                }
+            }
+
+            // 专门为喜马拉雅补充防 QUIC 规则
+            if (item.name === "喜马拉雅去广告") {
+                sections["[Rule]"].push(
+                    "AND,((DOMAIN-SUFFIX,ximalaya.com),(PROTOCOL,UDP),(DEST-PORT,443)),REJECT-NO-DROP",
+                    "AND,((DOMAIN-SUFFIX,xmcdn.com),(PROTOCOL,UDP),(DEST-PORT,443)),REJECT-NO-DROP",
+                    ""
+                );
+            }
+
+            if (secLines["[MITM]"]) {
+                for (const l of secLines["[MITM]"]) {
+                    const m = l.match(/^hostname\s*=\s*(?:%APPEND%\s*)?(.+)$/);
+                    if (m) {
+                        m[1].split(",").map(s => s.trim()).filter(Boolean).forEach(h => hostnames.add(h));
+                    }
+                }
+            }
+        }
+
+        const now = new Date();
+        const dateStr = now.toISOString().replace("T", " ").substring(0, 19);
+        const out = [];
+        out.push("#!name=去广告全家桶");
+        out.push("#!desc=全自动同步多合一去广告模块。整合广告平台拦截器、可莉广告过滤器、HTTPDNS、高德、淘宝、京东、喜马拉雅、百度贴吧、百度网盘、什么值得买、斗鱼、DREAME、YouTube Enhance。");
+        out.push("#!author=iRoy");
+        out.push("#!system=ios");
+        out.push(isBeta ? "#!category=BetaModule" : "#!category=iKeLee");
+        out.push(`#!date=${dateStr}`);
+        out.push("");
+
+        for (const [sec, items] of Object.entries(sections)) {
+            if (items.length > 0) {
+                out.push(sec);
+                out.push(...items);
+                out.push("");
+            }
+        }
+
+        out.push("[MITM]");
+        const sortedHosts = Array.from(hostnames).sort();
+        out.push(`hostname = %APPEND% ${sortedHosts.join(", ")}`);
+        out.push("");
+
+        return out.join("\n");
+    }
+
+    const regularContent = buildModuleContent(false);
+    const betaContent = buildModuleContent(true);
+
+    const targetRegular = path.join(SURGE_DIR, "去广告全家桶.sgmodule");
+    const targetBeta = path.join(BETA_DIR, "去广告全家桶.beta.sgmodule");
+
+    fs.writeFileSync(targetRegular, regularContent, "utf8");
+    fs.writeFileSync(targetBeta, betaContent, "utf8");
+
+    console.log("🎉 「去广告全家桶」模块构建完成！");
+}
+
 async function main() {
     const args = process.argv.slice(2);
     const forceAll = args.includes("--force");
@@ -524,6 +642,8 @@ async function main() {
     if (!skipOfficial) {
         await updateOfficialModules();
     }
+
+    await generateCombinedAdBlockModule();
 
     console.log("🔨 正在重新构建索引页面 (build.ts)...");
     await import("./build.ts");
