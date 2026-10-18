@@ -48,6 +48,7 @@ jobs:
         run: node update.mjs
 
       - name: Commit and push if changed
+        id: commit_step
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -55,7 +56,18 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "chore: 自动更新插件模块 ($(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M'))"
             git push
+            echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "✅ 检测到上游规则更新，已自动提交并推送！"
           else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "ℹ️ 当前所有模块均已是最新，无需提交。"
           fi
+
+      - name: Send WeChat notification if changed
+        if: steps.commit_step.outputs.has_changes == 'true'
+        env:
+          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+          WECHAT_WEBHOOK: ${{ secrets.WECHAT_WEBHOOK }}
+          WXPUSHER_APP_TOKEN: ${{ secrets.WXPUSHER_APP_TOKEN }}
+          WXPUSHER_UID: ${{ secrets.WXPUSHER_UID }}
+        run: node notify.mjs
