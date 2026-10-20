@@ -125,7 +125,10 @@ async function main() {
     }
 
     const focusUpdated = changed.filter((m) => FOCUS_MODULES.has(m));
-    const otherUpdated = changed.filter((m) => !FOCUS_MODULES.has(m));
+    if (focusUpdated.length === 0) {
+        console.log("ℹ️ 本次仅有非主力模块更新，未检测到你使用的 13 个主力模块更新，不触发微信通知。");
+        return;
+    }
 
     const now = new Date();
     const timeStr = new Intl.DateTimeFormat("zh-CN", {
@@ -138,32 +141,17 @@ async function main() {
         hour12: false,
     }).format(now);
 
-    let title = "Surge 模块规则更新提醒";
-    if (focusUpdated.length > 0) {
-        title = `Surge 模块更新: ${focusUpdated.slice(0, 2).join("、")}${focusUpdated.length > 2 ? " 等" : ""}`;
-    }
+    const title = `Surge 模块更新: ${focusUpdated.slice(0, 2).join("、")}${focusUpdated.length > 2 ? " 等" : ""}`;
 
     const markdownLines = [];
-    markdownLines.push(`## 🔔 Surge 模块更新提醒`);
+    markdownLines.push(`## 🔔 Surge 主力模块更新提醒`);
     markdownLines.push(`> ⏰ 更新时间：${timeStr}`);
     markdownLines.push("");
-
-    if (focusUpdated.length > 0) {
-        markdownLines.push(`### ⭐ 常用主力模块更新 (${focusUpdated.length} 个)`);
-        for (const m of focusUpdated) {
-            markdownLines.push(`* **${m}.sgmodule**`);
-        }
-        markdownLines.push("");
+    markdownLines.push(`### ⭐ 你正在使用的模块有更新 (${focusUpdated.length} 个)`);
+    for (const m of focusUpdated) {
+        markdownLines.push(`* **${m}.sgmodule**`);
     }
-
-    if (otherUpdated.length > 0) {
-        markdownLines.push(`### 📦 其他同步更新模块 (${otherUpdated.length} 个)`);
-        for (const m of otherUpdated) {
-            markdownLines.push(`* ${m}.sgmodule`);
-        }
-        markdownLines.push("");
-    }
-
+    markdownLines.push("");
     markdownLines.push(`---`);
     markdownLines.push(`👉 **更新指引**：打开 iPhone Surge -> 进入「模块」列表，点击对应模块并点击「更新」即可拉取最新版规则。`);
 
